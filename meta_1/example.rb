@@ -5,7 +5,7 @@ class Example
 
   memoize def foo(i)
     "foo#{i} - #{rand(i)}"
-  end
+  end, as: :@foo_cached
 
   memoize def bar
     "bar - #{rand(10)}"

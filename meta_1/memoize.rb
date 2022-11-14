@@ -7,7 +7,9 @@ module Memoize
 
   module ClassMethods
     def memoize(method_name, as: nil)
-      cache_variable_name = as ? :"#{as}" : :"@cache_#{method_name}"
+      cache_variable_name = as ? :"#{as}" : :"@cached_#{method_name}"
+      cached_args = :"@__cached_#{method_name}"
+
       original_method = "original_#{method_name}"
 
       alias_method original_method, method_name
@@ -28,8 +30,8 @@ module Memoize
           cache = {}
 
           if instance_variable_defined?(cache_variable_name)
-            cache = instance_variable_get(cache_variable_name)
-            return cache[key] if cache.key?(key)
+            cache = instance_variable_get(cached_args) || {}
+            return instance_variable_set(cache_variable_name, cache[key]) if cache.key?(key)
 
             cache[key] = __send__(original_method, *args)
             cache.shift if cache.size > 100 # optional memory leak guard
@@ -37,7 +39,8 @@ module Memoize
             cache[key] = __send__(original_method, *args)
           end
 
-          instance_variable_set(cache_variable_name, cache)
+          instance_variable_set(cache_variable_name, cache[key])
+          instance_variable_set(cached_args, cache)
           cache[key]
         end
       end
