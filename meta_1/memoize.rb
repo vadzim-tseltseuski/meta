@@ -14,27 +14,31 @@ module Memoize
 
       args_count = self.instance_method(original_method).arity
 
-      define_method method_name do |*args|
-        if instance_variable_defined?(cache_variable_name)
-          cached_value = instance_variable_get(cache_variable_name)
-        end
-
-        if args_count == 0
-          if !cached_value
-            cached_value = send(original_method)
-            instance_variable_set(cache_variable_name, cached_value)
+      if args_count == 0
+        define_method method_name do
+          if instance_variable_defined?(cache_variable_name)
+            return instance_variable_get(cache_variable_name)
           else
-            cached_value
+            instance_variable_set(cache_variable_name, __send__(original_method))
           end
-        else
+        end
+      else
+        define_method method_name do |*args|
+          key = args.hash
+          cache = {}
 
-          if !cached_value.is_a?(Hash)
-            cached_value = {args => send(original_method, *args)}
-            self.instance_variable_set(cache_variable_name, cached_value)
-          elsif !cached_value.has_key?(args)
-            cached_value[args] = send(original_method, *args)
+          if instance_variable_defined?(cache_variable_name)
+            cache = instance_variable_get(cache_variable_name)
+            return cache[key] if cache.key?(key)
+
+            cache[key] = __send__(original_method, *args)
+            cache.shift if cache.size > 100 # optional memory leak guard
+          else
+            cache[key] = __send__(original_method, *args)
           end
-            cached_value[args]
+
+          instance_variable_set(cache_variable_name, cache)
+          cache[key]
         end
       end
     end
