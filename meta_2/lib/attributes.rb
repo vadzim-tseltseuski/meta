@@ -1,4 +1,4 @@
-require 'pry'
+
 class Attributes < Module
   autoload :DSL, File.join(__dir__, "dsl")
 
@@ -23,13 +23,8 @@ class Attributes < Module
         instance_variable_set(ivar, value)
       end
 
-
       if attribute[:required]
         required_list << attribute[:name]
-      end
-
-      if attribute[:default]
-        instance_variable_set(ivar, attribute[:default])
       end
 
       if attribute[:enum]
@@ -47,9 +42,7 @@ class Attributes < Module
 
       if attribute[:actions]
         attribute[:actions].each do |name, block|
-          define_method name do
-            instance_exec(&block)
-          end
+          define_method(name, &block)
         end
       end
 
@@ -60,38 +53,9 @@ class Attributes < Module
         raise ArgumentError, required_list
        end
 
-       ivar_result = results.map { |r| ["@#{r[:name].to_sym}", r[:default]]}
+       ivar_result = results.map { |r| ["@#{r[:name].to_sym}", r[:default].is_a?(Proc) ? r[:default].call : r[:default]] }
 
        ivar_result.each { |ivar, value| instance_variable_set(ivar, value) }
     end
   end
-
-
 end
-
-class Foo
-  include (Attributes.define do
-    name do
-      required!
-    end
-    state do
-      enum %i[pending running stopped failed]
-      default :pending
-    end
-    started_at { default { Time.now } }
-    count do
-      default 0
-      actions do
-        incr! do
-          @count += 1
-        end
-        decr! do
-          @count -= 1
-        end
-      end
-    end
-  end)
-end
-
-
-

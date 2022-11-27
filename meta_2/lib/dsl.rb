@@ -33,7 +33,7 @@ module DSL
     end
 
     def default(value = nil, &block)
-      @default = block.call if block_given?
+      @default = block if block_given?
       @default ||= value
     end
 
